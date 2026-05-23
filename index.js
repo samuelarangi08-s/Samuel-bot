@@ -1,3 +1,54 @@
+const {
+default: makeWASocket,
+useMultiFileAuthState,
+fetchLatestBaileysVersion
+} = require("@whiskeysockets/baileys")
+
+const qrcode = require("qrcode-terminal")
+const P = require("pino")
+
+console.log("INICIANDO BOT...")
+
+async function startBot() {
+
+const { state, saveCreds } =
+await useMultiFileAuthState("session")
+
+const { version } =
+await fetchLatestBaileysVersion()
+
+const sock = makeWASocket({
+version,
+logger: P({ level: "silent" }),
+auth: state
+})
+
+// QR Y CONEXIÓN
+sock.ev.on("connection.update", ({ connection, qr }) => {
+
+if (qr) {
+
+console.log("ESCANEA ESTE QR")
+
+qrcode.generate(qr, {
+small: true
+})
+}
+
+if (connection === "open") {
+console.log("BOT CONECTADO")
+}
+
+if (connection === "close") {
+console.log("RECONECTANDO...")
+startBot()
+}
+
+})
+
+sock.ev.on("creds.update", saveCreds)
+
+// MENSAJES
 sock.ev.on("messages.upsert", async ({ messages }) => {
 
 const msg = messages[0]
@@ -119,5 +170,7 @@ text: "⚠️ Kickall ejecutado"
 }
 
 })
-  
+
+}
+
 startBot()
