@@ -1,56 +1,3 @@
-const {
-default: makeWASocket,
-useMultiFileAuthState,
-fetchLatestBaileysVersion
-} = require("@whiskeysockets/baileys")
-
-const qrcode = require("qrcode-terminal")
-const P = require("pino")
-
-console.log("INICIANDO BOT...")
-
-async function startBot() {
-
-const { state, saveCreds } =
-await useMultiFileAuthState("session")
-
-const { version } =
-await fetchLatestBaileysVersion()
-
-const sock = makeWASocket({
-version,
-logger: P({ level: "silent" }),
-auth: state
-})
-
-// QR Y CONEXIÓN
-sock.ev.on("connection.update", ({ connection, qr }) => {
-
-if (qr) {
-
-console.log("ESCANEA ESTE QR")
-
-qrcode.generate(qr, {
-small: true
-})
-}
-
-if (connection === "open") {
-console.log("BOT CONECTADO")
-}
-
-if (connection === "close") {
-console.log("RECONECTANDO...")
-startBot()
-}
-
-})
-
-sock.ev.on("creds.update", saveCreds)
-
-// MENSAJES
-sock.ev.on("messages.upsert", async ({ messages }) => {
-
 const msg = messages[0]
 
 if (!msg.message) return
@@ -66,56 +13,34 @@ msg.message.extendedTextMessage?.text ||
 if (text === "/menu") {
 
 const menu = `
-╔═══〔 MENU 〕═══╗
+╭━━━〔 🍃 HOJITAS BOT 🍃 )
 
-/hola
-/hora
-/estado
-/dueño
-/todos
-/kickall
+👑 OWNER: Samuel
 
-╚══════════════╝
+╭─⬣ COMANDOS
+│ ➜ /menu
+│ ➜ /todos
+│ ➜ /kick
+│ ➜ /kickall
+│ ➜ /tag
+│ ➜ /tiktok
+│ ➜ /play
+│ ➜ /mp3
+│ ➜ /mp4
+│ ➜ /toimg
+╰────────────⬣
+
+⚡ Bot activo 24/7
 `
 
 await sock.sendMessage(from, {
-text: menu
+image: {
+url: "https://i.postimg.cc/28jSyjpS/Whats-App-Image-2026-05-23-at-7-08-40-AM.jpg"
+},
+caption: menu
 })
 }
 
-// HOLA
-if (text === "/hola") {
-
-await sock.sendMessage(from, {
-text: "👋 Hola"
-})
-}
-
-// HORA
-if (text === "/hora") {
-
-const hora = new Date().toLocaleTimeString()
-
-await sock.sendMessage(from, {
-text: `🕒 ${hora}`
-})
-}
-
-// ESTADO
-if (text === "/estado") {
-
-await sock.sendMessage(from, {
-text: "✅ Bot activo 24/7"
-})
-}
-
-// DUEÑO
-if (text === "/dueño") {
-
-await sock.sendMessage(from, {
-text: "👑 Samuel"
-})
-}
 
 // TODOS
 if (text === "/todos") {
@@ -133,6 +58,31 @@ const users = metadata.participants.map(p => p.id)
 await sock.sendMessage(from, {
 text: "📢 @everyone",
 mentions: users
+})
+}
+
+// KICK
+if (text.startsWith("/kick")) {
+
+if (!from.endsWith("@g.us")) return
+
+const mentioned =
+msg.message.extendedTextMessage?.contextInfo?.mentionedJid
+
+if (!mentioned) {
+return sock.sendMessage(from, {
+text: "❌ Etiqueta a alguien"
+})
+}
+
+await sock.groupParticipantsUpdate(
+from,
+[mentioned[0]],
+"remove"
+)
+
+await sock.sendMessage(from, {
+text: "✅ Usuario eliminado"
 })
 }
 
@@ -169,8 +119,125 @@ text: "⚠️ Kickall ejecutado"
 })
 }
 
-})
+// TAG
+if (text.startsWith("/tag")) {
 
+const mentioned =
+msg.message.extendedTextMessage?.contextInfo?.mentionedJid
+
+if (!mentioned) {
+return sock.sendMessage(from, {
+text: "❌ Etiqueta a alguien"
+})
 }
 
+await sock.sendMessage(from, {
+text: `👋 Hola @${mentioned[0].split("@")[0]}`,
+mentions: mentioned
+})
+}
+
+// TIKTOK
+if (text.startsWith("/tiktok ")) {
+
+const url = text.split(" ")[1]
+
+try {
+
+const api = await axios.get(
+`https://api.tiklydown.eu.org/api/download?url=${url}`
+)
+
+const video = api.data.video.noWatermark
+
+await sock.sendMessage(from, {
+video: { url: video },
+caption: "✅ TikTok descargado"
+})
+
+} catch {
+await sock.sendMessage(from, {
+text: "❌ Error descargando TikTok"
+})
+}
+}
+
+// PLAY
+if (text.startsWith("/play ")) {
+
+const query = text.replace("/play ", "")
+
+const search = await yts(query)
+
+const video = search.videos[0]
+
+await sock.sendMessage(from, {
+text:
+`🎵 ${video.title}
+
+${video.url}`
+})
+}
+
+// MP3
+if (text.startsWith("/mp3 ")) {
+
+const query = text.replace("/mp3 ", "")
+
+const search = await yts(query)
+
+const video = search.videos[0]
+
+const stream = ytdl(video.url, {
+filter: "audioonly"
+})
+
+const path = "./audio.mp3"
+
+ffmpeg(stream)
+.audioBitrate(128)
+.save(path)
+.on("end", async () => {
+
+await sock.sendMessage(from, {
+audio: fs.readFileSync(path),
+mimetype: "audio/mp4"
+})
+
+fs.unlinkSync(path)
+
+})
+}
+
+// MP4
+if (text.startsWith("/mp4 ")) {
+
+const query = text.replace("/mp4 ", "")
+
+const search = await yts(query)
+
+const video = search.videos[0]
+
+await sock.sendMessage(from, {
+video: { url: video.url },
+caption: video.title
+})
+}
+
+// TOIMG
+if (text === "/toimg") {
+
+const quoted =
+msg.message.extendedTextMessage?.contextInfo?.quotedMessage
+
+if (!quoted?.stickerMessage) {
+return sock.sendMessage(from, {
+text: "❌ Responde a un sticker"
+})
+}
+
+await sock.sendMessage(from, {
+text: "⚠️ Función en proceso"
+})
+}
 startBot()
