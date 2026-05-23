@@ -1,69 +1,20 @@
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion
-} = require("@whiskeysockets/baileys")
+sock.ev.on("messages.upsert", async ({ messages }) => {
 
-const qrcode = require("qrcode-terminal")
-const P = require("pino")
+const msg = messages[0]
 
-console.log("INICIANDO BOT...")
+if (!msg.message) return
 
-async function startBot() {
+const from = msg.key.remoteJid
 
-  const { state, saveCreds } = await useMultiFileAuthState("session")
+const text =
+msg.message.conversation ||
+msg.message.extendedTextMessage?.text ||
+""
 
-  const { version } = await fetchLatestBaileysVersion()
+// MENU
+if (text === "/menu") {
 
-  const sock = makeWASocket({
-    version,
-    logger: P({ level: "silent" }),
-    auth: state
-  })
-
-  // CONEXIÓN
-  sock.ev.on("connection.update", ({ connection, qr }) => {
-
-    if (qr) {
-
-      console.log("ESCANEA ESTE QR")
-
-      qrcode.generate(qr, {
-        small: true
-      })
-    }
-
-    if (connection === "open") {
-      console.log("BOT CONECTADO")
-    }
-
-    if (connection === "close") {
-      console.log("RECONECTANDO...")
-      startBot()
-    }
-
-  })
-
-  sock.ev.on("creds.update", saveCreds)
-
-  // MENSAJES
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-
-    const msg = messages[0]
-
-    if (!msg.message) return
-
-    const from = msg.key.remoteJid
-
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      ""
-
-    // MENU
-    if (text === "/menu") {
-
-      const menu = `
+const menu = `
 ╔═══〔 MENU 〕═══╗
 
 /hola
@@ -76,46 +27,46 @@ async function startBot() {
 ╚══════════════╝
 `
 
-      await sock.sendMessage(from, {
-        text: menu
-      })
-    }
+await sock.sendMessage(from, {
+text: menu
+})
+}
 
-    // HOLA
-    if (text === "/hola") {
+// HOLA
+if (text === "/hola") {
 
-      await sock.sendMessage(from, {
-        text: "👋 Hola"
-      })
-    }
+await sock.sendMessage(from, {
+text: "👋 Hola"
+})
+}
 
-    // HORA
-    if (text === "/hora") {
+// HORA
+if (text === "/hora") {
 
-      const hora = new Date().toLocaleTimeString()
+const hora = new Date().toLocaleTimeString()
 
-      await sock.sendMessage(from, {
-        text: `🕒 ${hora}`
-      })
-    }
+await sock.sendMessage(from, {
+text: `🕒 ${hora}`
+})
+}
 
-    // ESTADO
-    if (text === "/estado") {
+// ESTADO
+if (text === "/estado") {
 
-      await sock.sendMessage(from, {
-        text: "✅ Bot activo 24/7"
-      })
-    }
+await sock.sendMessage(from, {
+text: "✅ Bot activo 24/7"
+})
+}
 
-    // DUEÑO
-    if (text === "/dueño") {
+// DUEÑO
+if (text === "/dueño") {
 
-      await sock.sendMessage(from, {
-        text: "👑 Samuel"
-      })
-    }
+await sock.sendMessage(from, {
+text: "👑 Samuel"
+})
+}
 
-   // TODOS
+// TODOS
 if (text === "/todos") {
 
 if (!from.endsWith("@g.us")) {
@@ -166,6 +117,7 @@ await sock.sendMessage(from, {
 text: "⚠️ Kickall ejecutado"
 })
 }
-  })
-}
+
+})
+  
 startBot()
