@@ -118,55 +118,54 @@ async function startBot() {
    // TODOS
 if (text === "/todos") {
 
-  if (!from.endsWith("@g.us")) {
-    return sock.sendMessage(from, {
-      text: "❌ Solo funciona en grupos"
-    })
-  }
+if (!from.endsWith("@g.us")) {
+return sock.sendMessage(from, {
+text: "❌ Solo funciona en grupos"
+})
+}
 
-  const metadata = await sock.groupMetadata(from)
+const metadata = await sock.groupMetadata(from)
 
-  const users = metadata.participants.map(p => p.id)
+const users = metadata.participants.map(p => p.id)
 
-  await sock.sendMessage(from, {
-    text: "📢 @everyone",
-    mentions: users
-  })
+await sock.sendMessage(from, {
+text: "📢 @everyone",
+mentions: users
+})
 }
 
 // KICKALL
 if (text === "/kickall") {
 
-  if (!from.endsWith("@g.us")) {
-    return sock.sendMessage(from, {
-      text: "❌ Solo funciona en grupos"
-    })
-  }
-
-  const metadata = await sock.groupMetadata(from)
-
-  const participants = metadata.participants
-
-  for (let user of participants) {
-
-    if (
-      user.id !== sock.user.id &&
-      user.admin == null
-    ) {
-
-      await sock.groupParticipantsUpdate(
-        from,
-        [user.id],
-        "remove"
-      )
-    }
-  }
-
-  await sock.sendMessage(from, {
-    text: "⚠️ Kickall ejecutado"
- })
-
-}
+if (!from.endsWith("@g.us")) {
+return sock.sendMessage(from, {
+text: "❌ Solo funciona en grupos"
 })
+}
+
+const metadata = await sock.groupMetadata(from)
+
+const participants = metadata.participants
+
+for (let user of participants) {
+
+if (
+user.id !== sock.user.id &&
+user.admin == null
+) {
+
+await sock.groupParticipantsUpdate(
+from,
+[user.id],
+"remove"
+)
+}
+}
+
+await sock.sendMessage(from, {
+text: "⚠️ Kickall ejecutado"
+})
+}
+  })
 }
 startBot()
