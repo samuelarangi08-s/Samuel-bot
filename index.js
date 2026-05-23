@@ -11,11 +11,9 @@ console.log("INICIANDO BOT...")
 
 async function startBot() {
 
-  const { state, saveCreds } =
-    await useMultiFileAuthState("session")
+  const { state, saveCreds } = await useMultiFileAuthState("session")
 
-  const { version } =
-    await fetchLatestBaileysVersion()
+  const { version } = await fetchLatestBaileysVersion()
 
   const sock = makeWASocket({
     version,
@@ -23,8 +21,8 @@ async function startBot() {
     auth: state
   })
 
-  sock.ev.on("connection.update",
-    ({ connection, qr }) => {
+  // CONEXIÓN
+  sock.ev.on("connection.update", ({ connection, qr }) => {
 
     if (qr) {
 
@@ -33,7 +31,6 @@ async function startBot() {
       qrcode.generate(qr, {
         small: true
       })
-
     }
 
     if (connection === "open") {
@@ -49,8 +46,8 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds)
 
-  sock.ev.on("messages.upsert",
-    async ({ messages }) => {
+  // MENSAJES
+  sock.ev.on("messages.upsert", async ({ messages }) => {
 
     const msg = messages[0]
 
@@ -73,14 +70,15 @@ async function startBot() {
 /hora
 /estado
 /dueño
+/todos
+/kickall
 
-╚════════════════╝
+╚══════════════╝
 `
 
       await sock.sendMessage(from, {
         text: menu
       })
-
     }
 
     // HOLA
@@ -89,19 +87,16 @@ async function startBot() {
       await sock.sendMessage(from, {
         text: "👋 Hola"
       })
-
     }
 
     // HORA
     if (text === "/hora") {
 
-      const hora =
-        new Date().toLocaleTimeString()
+      const hora = new Date().toLocaleTimeString()
 
       await sock.sendMessage(from, {
-        text: `⏰ ${hora}`
+        text: `🕒 ${hora}`
       })
-
     }
 
     // ESTADO
@@ -110,7 +105,6 @@ async function startBot() {
       await sock.sendMessage(from, {
         text: "✅ Bot activo 24/7"
       })
-
     }
 
     // DUEÑO
@@ -119,11 +113,60 @@ async function startBot() {
       await sock.sendMessage(from, {
         text: "👑 Samuel"
       })
-
     }
 
-  })
+   // TODOS
+if (text === "/todos") {
 
+  if (!from.endsWith("@g.us")) {
+    return sock.sendMessage(from, {
+      text: "❌ Solo funciona en grupos"
+    })
+  }
+
+  const metadata = await sock.groupMetadata(from)
+
+  const users = metadata.participants.map(p => p.id)
+
+  await sock.sendMessage(from, {
+    text: "📢 @everyone",
+    mentions: users
+  })
 }
 
+// KICKALL
+if (text === "/kickall") {
+
+  if (!from.endsWith("@g.us")) {
+    return sock.sendMessage(from, {
+      text: "❌ Solo funciona en grupos"
+    })
+  }
+
+  const metadata = await sock.groupMetadata(from)
+
+  const participants = metadata.participants
+
+  for (let user of participants) {
+
+    if (
+      user.id !== sock.user.id &&
+      user.admin == null
+    ) {
+
+      await sock.groupParticipantsUpdate(
+        from,
+        [user.id],
+        "remove"
+      )
+    }
+  }
+
+  await sock.sendMessage(from, {
+    text: "⚠️ Kickall ejecutado"
+ })
+
+}
+})
+}
 startBot()
